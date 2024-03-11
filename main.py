@@ -1,6 +1,10 @@
 import re
+import urllib
 from datetime import time
-
+import json
+import threading
+import httplib2
+import requests
 import serial
 from kivy.clock import Clock
 from kivy.lang import Builder
@@ -11,6 +15,11 @@ from kivymd.uix.floatlayout import MDFloatLayout
 from kivymd.uix.gridlayout import MDGridLayout
 from kivy_garden.graph import BarPlot, Graph, SmoothLinePlot, LinePlot, MeshLinePlot
 from kivymd.uix.label import MDLabel
+import matplotlib.pyplot as plt
+from kivy.garden.matplotlib.backend_kivyagg import FigureCanvasKivyAgg
+from matplotlib.figure import Figure
+
+
 KV = '''
 Main_window:
 	
@@ -32,14 +41,8 @@ Main_window:
 			font_style: "H4"
 			halign: "center"
 	MDBoxLayout:
-		id: graph_box
-		#canvas:
-		#	Color:                        
-        #        rgba: 0, 0, 1, 0.1    
-	    #    Rectangle:                    
-	    #        size: self.size         
-	    #        pos: self.pos
-		size_hint: 0.95, 0.9
+		id: graph_box                      
+		size_hint: 1, 0.9
 	MDBoxLayout:      
 	
 		size_hint: 1, 0.1 	
@@ -97,62 +100,36 @@ Main_window:
 		    MDLabel:
 		        id: c_min          
 		        text: "text"
-		        pos_hint: {"center_x": 0.9, "center_y": 0.5}                                        
+		        pos_hint: {"center_x": 0.8, "center_y": 0.5}                                        
 '''
 class Main_window(MDBoxLayout):
+
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
-		#print(self.children)
+
+		self.graf = plt.gcf()
 		self.graph = None
 		self.x_axes = []
 		self.y_axes = []
 		self.t = 0
-		
+		self.y_value = 0
 		self.bind(on_kv_post=self.create_graph)
+		Clock.schedule_once(self.init_serial_connection)
 
+	# creating of plot
 	def create_graph(self, *args):
-		# This method will be called after the KV rules are applied
-		#self.graph = Graph(
-			# Your graph configuration...
-		#)
-		# Find the box layout with id graph_box
-		self.graph = Graph(
-			xlabel='time',
-			ylabel='λ, 1/R',
-			border_color=(0, 0, 0, 1),
-			label_options={'color': (0, 0, 0, 1)},
-			x_ticks_minor=1,
-			x_ticks_major=5,
-			y_ticks_major=1,
-			y_ticks_minor=1,
-			#y_ticks_major=5,
-			y_grid_label=True,
-			x_grid_label=True,
-			padding=5,
-			x_grid=False,
-			y_grid=False,
-			xmin=0, xmax=60,
-			ymin=0, ymax=3,
-			pos_hint={"x": 0, "y": 0.05},
-			size_hint=(0.5, 0.9)
-		)
-
-		self.plot = SmoothLinePlot(color=[0, 1, 0, 1])
-		self.plot_x = self.x_axes
-		self.plot_y = self.y_axes
-		#self.plot.color = [0, 1, 0, 1]
-		# self.graph.add_plot(self.plot2)
-		self.graph.add_plot(self.plot)
 		graph_box = self.ids.graph_box
-		graph_box.add_widget(self.graph)
-		self.start_bar_plotting()
+		graph_box.add_widget(FigureCanvasKivyAgg(self.graf))
 
+ 	# attempt of threading
+	def init_serial_connection(self, *args):
+		threading.Thread(target=self.start_bar_plotting, daemon=True).start()
+
+	#----connecting to Arduino bouard via com3 port
 	def start_bar_plotting(self):
-		try:
+		try:    # try / except  prevents of crashing program
 			self.Ard_Data = serial.Serial("com3", 9600)  # com3 port for USB connection
 			Clock.schedule_interval(self.on_start, 1)
-			#Clock.schedule_interval(self.update_axis, 1)
-			Clock.schedule_interval(self.update_points, 0.25)
 
 		except serial.SerialException:
 			Clock.schedule_once(self.retry_connection, 0.1)
@@ -160,47 +137,31 @@ class Main_window(MDBoxLayout):
 	def retry_connection(self, dt):
 		self.start_bar_plotting()
 
-	def bar_plot_stop(self):
-		Clock.unschedule(self.on_start)
-		#Clock.unschedule(self.update_axis)
-		#Clock.unschedule(self.update_points)
-		time.sleep(0.5)
-		self.Ard_Data.close()
-
+	# retrieving data from arduino and treating it
 	def on_start(self, dt):
 		self.read_data = self.Ard_Data.readline()
 		self.read_data = self.read_data.decode()
-		#print(self.read_data)
 		self.digits = re.findall(r'\b\d+\.\d+\b', self.read_data)
-		#print(self.digits[0])   #-------------------> to debug output
-		#try:
 		self.read_data_t = float(self.digits[0])
-
+		self.read_data_t = round(self.read_data_t, 3)
 		self.y_axes.append(self.read_data_t)
-		#print(self.y_axes)
-	    #
-		#except:
-
-	#	self.radiation.append(self.read_data_r)
-	#	# self.coordinates.append(self.read_data_c)
-	#	# self.temperature.append(self.read_data_t)
-	#
-	#	self.read_data_r = 60 * self.read_data_r
-	#	self.y_axes.append(self.read_data_r)
-	#
 		self.t += dt
 		self.t = round(self.t)
-	#
 		self.x_axes.append(self.t)
-	#
-		if len(self.x_axes) > 50:
-		#	self.x_axes.pop(0)
-			Clock.schedule_interval(self.update_axis, 1)
-		#if len(self.y_axes) > 50:
-		#	self.y_axes.pop(0)
-	#
-		print(self.x_axes)
-		print(self.y_axes)
+		self.y_value = max(self.y_axes)+0.25
+
+		# setting of plots properties
+		plt.legend(["λ/t"], loc="upper right")
+		plt.plot(self.x_axes, self.y_axes, color='red', linestyle='-', linewidth=3, animated=False,
+	    	markerfacecolor='blue', markersize=12)
+		plt.xlabel('t, sec')
+		plt.ylabel('λ, 1/R')
+		plt.grid(False)
+		plt.ylim(0, self.y_value)
+		plt.style.context('dark_background')
+		self.graf.canvas.draw()
+
+		# adding new variables
 		min_value = min(self.y_axes)
 		min_value = round(min_value, 3)
 		max_value = max(self.y_axes)
@@ -214,12 +175,16 @@ class Main_window(MDBoxLayout):
 		self.ids.c_avr.text = "λ avr " + str(avr_value)
 		self.ids.c_act.text = "λ " + str(actual_value)
 
-	def update_axis(self, dt):
-		self.graph.xmin = self.x_axes[0]
-		self.graph.xmax = self.x_axes[-1]
-	
-	def update_points(self, *args):
-		self.plot.points = [(self.x_axes[i], self.y_axes[i]) for i in range(len(self.y_axes))]
+		# preparing data for sending to remote web server
+ 		data = {
+			'x_axes': self.x_axes,
+			'y_axes': self.y_axes
+		}
+		url = 'http://conductivity.atwebpages.com/save_data.php'
+
+		headers = {"Content-Type": "application/json", "charset": "UTF-8"}
+
+		response = requests.post(url, json=data, headers=headers)
 
 class Conductivity(MDApp):
 	def build(self):
@@ -229,5 +194,9 @@ class Conductivity(MDApp):
 		return Builder.load_string(KV)
 
 
+if __name__ == '__main__':
+	Conductivity().run()
 
-Conductivity().run()
+
+
+	#Main_window.task3.start()
