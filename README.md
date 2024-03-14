@@ -27,6 +27,6 @@ Consequently, we get this picture on our web page:
 
 In brief, here is a process of the titration of solution of acetate acid CH3COOH with base NaOH. It points at the end-point of neutralisation reaction which is visible at 119 sec with the lowest value of solution conductance at that moment, that means CH3COOH had fully reacted with base and very next portion of it will increase conductance.    
 All these measurements are just with demonstrative purpose and can’t be used in lab analyses directly from here. 
-Here have been used reactives, which is possible to get from shop, and unfortunately I have not access to a chemical lab to calibrate measurements with helping of standard solution and lab equipment. 
+Here have been used reactives, which is possible to get from shop, and unfortunately I have not access to a chemical lab to calibrate measurements with the help of standard solution and lab equipment. 
 
 
