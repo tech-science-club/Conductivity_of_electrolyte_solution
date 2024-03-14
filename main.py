@@ -36,7 +36,7 @@ Main_window:
             
 		size_hint: 1, 0.1
 		MDLabel:
-			text: "Solution conductivity"
+			text: "Solution conductance"
 			pos_hint: {"center_x": 0.5, "center_y": 0.5}
 			font_style: "H4"
 			halign: "center"
@@ -56,6 +56,7 @@ Main_window:
 		    pos_hint: {"center_x": 0.25, "center_y": 0.5}    
 		    size_hint: 0.25, 1                              
 		    MDLabel:
+		        font_name: "Arial"
 		        id: c_act                                           
 		        text: "text"
 		        pos_hint: {"center_x": 0.8, "center_y": 0.5}                                 
@@ -72,9 +73,10 @@ Main_window:
 		    pos_hint: {"center_x": 0.5, "center_y": 0.5}           
 		    size_hint: 0.25, 1
 		    MDLabel:
+		        font_name: "Arial"
 		        id: c_max          
 		        text: "text"
-		        pos_hint: {"center_x": 0.8, "center_y": 0.5}                                        
+		        pos_hint: {"center_x": 0.7, "center_y": 0.5}                                        
 		MDFloatLayout:
 			canvas:
 				Color:                        
@@ -82,12 +84,13 @@ Main_window:
 		        Rectangle:                    
 		            size: self.size         
 		            pos: self.pos
-		    pos_hint: {"center_x": 0.75, "center_y": 0.5}   
+		    pos_hint: {"center_x": 0.8, "center_y": 0.5}   
 		    size_hint: 0.25, 1
 		    MDLabel:
+		        font_name: "Arial"
 		        id: c_avr          
 		        text: "text"
-		        pos_hint: {"center_x": 0.8, "center_y": 0.5}                               
+		        pos_hint: {"center_x": 0.7, "center_y": 0.5}                               
 		MDFloatLayout:                    
 			canvas:                       
 				Color:                    
@@ -98,9 +101,10 @@ Main_window:
 		    pos_hint: {"center_x": 0.9, "center_y": 0.5}   
 		    size_hint: 0.25, 1
 		    MDLabel:
+		        font_name: "Arial"
 		        id: c_min          
 		        text: "text"
-		        pos_hint: {"center_x": 0.8, "center_y": 0.5}                                        
+		        pos_hint: {"center_x": 0.7, "center_y": 0.5}                                        
 '''
 class Main_window(MDBoxLayout):
 
@@ -148,14 +152,20 @@ class Main_window(MDBoxLayout):
 		self.t += dt
 		self.t = round(self.t)
 		self.x_axes.append(self.t)
-		self.y_value = max(self.y_axes)+0.25
+		self.y_value = max(self.y_axes)+0.025
 
 		# setting of plots properties
-		plt.legend(["λ/t"], loc="upper right")
-		plt.plot(self.x_axes, self.y_axes, color='red', linestyle='-', linewidth=3, animated=False,
-	    	markerfacecolor='blue', markersize=12)
+		plt.legend(["ϰ/t"], loc="upper right")
+		plt.plot(self.x_axes, self.y_axes,
+			color='red',
+			linestyle='-',
+			linewidth=3,
+			animated=False,
+	    	markerfacecolor='blue',
+			markersize=12)
+
 		plt.xlabel('t, sec')
-		plt.ylabel('λ, 1/R')
+		plt.ylabel('ϰ, 1/R')
 		plt.grid(False)
 		plt.ylim(0, self.y_value)
 		plt.style.context('dark_background')
@@ -170,16 +180,16 @@ class Main_window(MDBoxLayout):
 		avr_value = round(avr_value, 3)
 		actual_value = self.y_axes[-1]
 
-		self.ids.c_min.text = "λ min " + str(min_value)
-		self.ids.c_max.text = "λ max " + str(max_value)
-		self.ids.c_avr.text = "λ avr " + str(avr_value)
-		self.ids.c_act.text = "λ " + str(actual_value)
+		self.ids.c_min.text = "ϰ min " + str(min_value) + " S/cm"
+		self.ids.c_max.text = "ϰ max " + str(max_value) + " S/cm"
+		self.ids.c_avr.text = "ϰ avr " + str(avr_value) + " S/cm"
+		self.ids.c_act.text = "ϰ " + str(actual_value)  + " S/cm"
 
 		# preparing data for sending to remote web server
- 		data = {
+		data = {
 			'x_axes': self.x_axes,
 			'y_axes': self.y_axes
-		}
+				}
 		url = 'http://conductivity.atwebpages.com/save_data.php'
 
 		headers = {"Content-Type": "application/json", "charset": "UTF-8"}
