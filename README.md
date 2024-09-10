@@ -1,4 +1,4 @@
-Embedding programming into electrochemical investigations of electrolyte solutions 
+# Embedding programming into electrochemical investigations of electrolyte solutions 
 
 we utilize the Python programming language along with its libraries and the Arduino board AtMega 2560. Python is used to design a framework that displays real-time data flow, while the AtMega2560 is employed to obtain analog signals, convert them into digital ones, send them to a PC, and process them as desired.
 
